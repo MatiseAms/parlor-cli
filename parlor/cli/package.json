@@ -1,0 +1,19 @@
+{
+  "name": "@matise/parlor-cli",
+  "version": "1.0.0",
+  "main": "parlor.js",
+  "bin": {
+    "parlor": "bin/index.js"
+  },
+  "keywords": [
+    "node",
+    "parlor"
+  ],
+  "author": "dipsaus9",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^2.4.2"
+  },
+  "devDependencies": {},
+  "description": ""
+}
