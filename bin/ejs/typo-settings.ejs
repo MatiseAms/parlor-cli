@@ -7,7 +7,7 @@
 	@include min-('font-size', <%- typo.baseSize / 80 %>, <%- typo.minSize %>);
 	line-height: <%- typo.lineheight %>;
 	color: <%- typo.colors[0] %>;
-	letter-spacing: <%- typo.kerning %>;<% if (typo.hasItalic) { %>
+	letter-spacing: <%- typo.kerning %>px;<% if (typo.hasItalic) { %>
 	&.italic {
 		font-style: italic;
 	}<% } %>
@@ -17,7 +17,7 @@
 	font-size: rem(<%- typo.baseSize %>);
 	line-height: <%- typo.lineheight %>;
 	color: <%- typo.colors[0] %>;
-	letter-spacing: <%- typo.kerning %>;<% if (typo.hasItalic) { %>
+	letter-spacing: <%- typo.kerning %>px;<% if (typo.hasItalic) { %>
 	&.italic {
 		font-style: italic;
 	}<% } %> %>
