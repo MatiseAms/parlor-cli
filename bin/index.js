@@ -51,7 +51,7 @@ if (!commands.includes(args[2])) {
       const config = require(`${process.cwd()}/parlor.config.js`);
       const project = await axios({
         method: "post",
-        url: "http://localhost:3000/parlor-cli",
+        url: "https://api.parlor.mati.se/parlor-cli",
         data: {
           username: config.username,
           password: config.password,
@@ -106,7 +106,7 @@ if (!commands.includes(args[2])) {
         const response = await axios({
           method: "post",
           responseType: "stream",
-          url: "http://localhost:3000/parlor-cli/fonts",
+          url: "https://api.parlor.mati.se/parlor-cli/fonts",
           data: {
             username: config.username,
             password: config.password,
