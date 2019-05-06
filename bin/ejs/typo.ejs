@@ -1,0 +1,43 @@
+$font-primary: (
+	font-family: (
+		<%- fonts[0].key %>,
+		serif
+	),
+	load: true,
+	weights: (<% fonts[0].weights.forEach((weight, index) => { %>
+		'<%- weight.name %>': <%- weight.value %><% if (index !== fonts[0].weights.length - 1) { %>,<% } %><% }); %>
+	),
+	path: '~assets/fonts',
+	files: (
+		'woff2'
+	),
+	use: (<% fonts[0].values.forEach((font, index) => { %>
+		'<%- font.key %>'<% if (index !== fonts[0].values.length - 1) { %>,<% } %><% }); %>
+	),
+	types: (
+		'normal'<% if (fonts[0].hasItalic) { %>,<% } %><% if (fonts[0].hasItalic) { %>
+		'italic'<% } %>
+	)
+);
+<% if (fonts[1]) { %>
+$font-secondary: (
+	font-family: (
+		<%- fonts[1].key %>,
+		serif
+	),
+	load: true,
+	weights: (<% fonts[1].weights.forEach((weight, index) => { %>
+		'<%- weight.name %>': <%- weight.value %><% if (index !== fonts[1].weights.length - 1) { %>,<% } %><% }); %>
+	),
+	path: '~assets/fonts',
+	files: (
+		'woff2'
+	),
+	use: (<% fonts[1].values.forEach((font, index) => { %>
+		'<%- font.key %>'<% if (index !== fonts[1].values.length - 1) { %>,<% } %><% }); %>
+	),
+	types: (
+		'normal'<% if (fonts[1].hasItalic) { %>,<% } %><% if (fonts[1].hasItalic) { %>
+		'italic'<% } %>
+	)
+);<% } %>

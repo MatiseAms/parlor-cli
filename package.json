@@ -1,6 +1,6 @@
 {
   "name": "@matise/parlor-cli",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "parlor.js",
   "bin": {
     "parlor": "bin/index.js"
@@ -12,7 +12,11 @@
   "author": "dipsaus9",
   "license": "ISC",
   "dependencies": {
-    "chalk": "^2.4.2"
+    "adm-zip": "^0.4.13",
+    "axios": "^0.18.0",
+    "chalk": "^2.4.2",
+    "ejs": "^2.6.1",
+    "mkdirp": "^0.5.1"
   },
   "devDependencies": {},
   "description": ""

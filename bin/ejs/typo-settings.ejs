@@ -1,0 +1,26 @@
+* {
+	text-rendering: optimizeLegibility;
+}
+<% fonts.forEach((typo, index) => { %><% if (typo.key !== 'p') {%><%= typo.key %> {
+	font-weight: <%- typo.weight[0] %>;
+	font-size: <%- typo.gridSize %>;
+	@include min-('font-size', <%- typo.baseSize / 80 %>, <%- typo.minSize %>);
+	line-height: <%- typo.lineheight %>;
+	color: <%- typo.colors[0] %>;
+	letter-spacing: <%- typo.kerning %>;<% if (typo.hasItalic) { %>
+	&.italic {
+		font-style: italic;
+	}<% } %>
+}
+<% } else { %><%= typo.key %> {
+	font-weight: <%- typo.weight[0] %>;
+	font-size: rem(<%- typo.baseSize %>);
+	line-height: <%- typo.lineheight %>;
+	color: <%- typo.colors[0] %>;
+	letter-spacing: <%- typo.kerning %>;<% if (typo.hasItalic) { %>
+	&.italic {
+		font-style: italic;
+	}<% } %> %>
+}
+<% } %>
+<% }); %>
