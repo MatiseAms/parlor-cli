@@ -6,57 +6,89 @@ const axios = require("axios");
 const ejs = require("ejs");
 const AdmZip = require("adm-zip");
 const mkdirp = require("mkdirp");
+const commands = ["images", "typo", "colors", "grid"];
+let args = process.argv;
 
 const imageOutput = {
-  type: "text",
+  type: "directory",
+  basePath: "./",
   name: "image",
   message: "Enter your image output"
 };
 
 const fontOutput = {
-  type: "text",
+  type: "directory",
   name: "fonts",
-  message: "Enter your fonts output"
+  basePath: "./",
+  message:
+    "In which folder do you want to store your fonts? (fonts will be store into a fonts folder)"
 };
 
-const typoOutput = {
-  type: "text",
-  name: "typo",
-  message: "Enter your typo output"
-};
-
-const typoSetting = {
-  type: "text",
-  name: "typosetting",
-  message: "Enter your typo usage output"
+const typoFolder = {
+  type: "directory",
+  basePath: "./",
+  name: "typofolder",
+  message:
+    "Enter your typo ouptput folder (files will be saved as _parlor-usage and _parlor-embed)"
 };
 
 const gridOutput = {
-  type: "text",
+  type: "directory",
+  basePath: "./",
   name: "grid",
-  message: "Enter your grid output"
+  message: "Enter your grid output (file will be saved as _parlor-grid.scss)"
 };
 
 const colorsOutput = {
-  type: "text",
+  type: "directory",
+  basePath: "./",
   name: "color",
-  message: "Enter your colors output"
+  message:
+    "Enter your colors output (file will be saved as _parlor-custom-colors.scss)"
 };
 
-const args = process.argv;
 let config = {};
 (async () => {
+  const inquirer = require("inquirer");
+  inquirer.registerPrompt("filePath", require("inquirer-file-path"));
+  inquirer.registerPrompt("directory", require("inquirer-directory"));
+  let questions = [];
+  if (args[2] === "all") {
+    args.length -= 1;
+    args = args.concat(commands);
+  }
+  if (!args[2]) {
+    await new Promise(resolve => {
+      inquirer
+        .prompt([
+          {
+            type: "checkbox",
+            name: "args",
+            message: "What do you want to update?",
+            choices: ["Images", "Typo", "Colors", "Grid"]
+          }
+        ])
+        .then(answers => {
+          if (!args[2]) {
+            const anser = answers.args.map(ans => ans.toLowerCase());
+            args = args.concat(anser);
+          }
+          resolve();
+        });
+    });
+  }
   if (fs.existsSync("./parlor.config.js")) {
     config = require(`${process.cwd()}/parlor.config.js`);
-  } else {
-    const inquirer = require("inquirer");
-    let questions = [];
+  }
+  if (!config.projectId) {
+    questions.push({
+      type: "number",
+      name: "id",
+      message: "Enter your project ID of Parlor"
+    });
+  }
+  if (!config.username && !config.password) {
     questions = questions.concat([
-      {
-        type: "number",
-        name: "id",
-        message: "Enter your project ID of Parlor"
-      },
       {
         type: "text",
         name: "user",
@@ -68,48 +100,78 @@ let config = {};
         message: "Enter your password"
       }
     ]);
-    if (args.includes("all")) {
-      questions.push(
-        fontOutput,
-        typoOutput,
-        typoSetting,
-        colorsOutput,
-        gridOutput,
-        imageOutput
-      );
-    }
-    if (args.includes("colors")) {
-      questions.push(colorsOutput);
-    }
-    if (args.includes("grid")) {
-      questions.push(gridOutput);
-    }
-    if (args.includes("typo")) {
-      questions.push(typoOutput);
-      questions.push(fontOutput);
-      questions.push(typoSetting);
-    }
-    if (args.includes("images")) {
-      questions.push(imageOutput);
-    }
+  }
 
-    await new Promise(resolve => {
-      inquirer.prompt(questions).then(answers => {
+  if (args.includes("colors") && !config.colors) {
+    questions.push(colorsOutput);
+  }
+  if (args.includes("grid") && !config.grid) {
+    questions.push(gridOutput);
+  }
+  if (args.includes("typo")) {
+    if (!config.typoFolder) {
+      questions.push(typoFolder);
+    }
+    if (!config.fonts) {
+      questions.push(fontOutput);
+    }
+  }
+  if (args.includes("images") && !config.images) {
+    questions.push(imageOutput);
+  }
+
+  await new Promise(resolve => {
+    inquirer.prompt(questions).then(answers => {
+      if (answers.id) {
         config.projectId = answers.id;
+      }
+      if (answers.user && answers.password) {
         config.username = answers.user;
         config.password = answers.password;
+      }
+      if (answers.color) {
         config.colors = answers.color;
-        config.typo = answers.typo;
-        config.typoSettings = answers.typosetting;
-        config.images = answers.image;
+      }
+      if (answers.typofolder) {
+        config.typoFolder = answers.typofolder;
+      }
+      if (answers.grid) {
         config.grid = answers.grid;
-        config.fonts = answers.fonts;
-        resolve();
-      });
+      }
+
+      if (answers.fonts) {
+        let fontOutput = answers.fonts.split("/");
+        if (fontOutput[fontOutput.length - 1] === "fonts") {
+          fontOutput.length -= 1;
+        }
+        config.fonts = fontOutput.join("/");
+      }
+
+      if (answers.image) {
+        let imageOutput = answers.image.split("/");
+        if (imageOutput[imageOutput.length - 1] === "images") {
+          imageOutput.length -= 1;
+        }
+        config.images = imageOutput.join("/");
+      }
+      resolve();
     });
-  }
+  });
+
   const host = config.host || "https://api.parlor.mati.se";
-  const commands = ["all", "images", "typo", "colors"];
+
+  if (!config.typoSettingsFilename) {
+    config.typoSettingsFilename = "_parlor-usage.scss";
+  }
+  if (!config.typoEmbedFilename) {
+    config.typoEmbedFilename = "_parlor-embed.scss";
+  }
+  if (!config.colorFilename) {
+    config.colorFilename = "_parlor-custom-colors.scss";
+  }
+  if (!config.gridFilename) {
+    config.gridFilename = "_parlor-grid.scss";
+  }
   // usage represents the help guide
   const usageHelper = () => {
     const usageText = `
@@ -236,56 +298,88 @@ let config = {};
   };
 
   const writeColors = async project => {
-    const paths = config.grid.split("/");
-    paths.length -= 1;
-    await checkOrCreateFolder(paths.join("/") + "/");
+    await checkOrCreateFolder(`${process.cwd()}/${config.colors}/`);
     const colorScss = createColorFile(project.data.colors);
-    fs.writeFile(config.colors, colorScss, err => {
-      if (err) {
-        return console.log(err);
+    fs.writeFile(
+      `${process.cwd()}/${config.colors}/${config.colorFilename}`,
+      colorScss,
+      err => {
+        if (err) {
+          return console.log(err);
+        }
+        console.log(
+          chalk.green(
+            `The Colors are saved at ${config.colors}/${config.colorFilename}!`
+          )
+        );
       }
-      console.log(chalk.green(`The Colors are saved at ${config.colors}!`));
-    });
+    );
   };
 
   const writeGrid = async project => {
-    const paths = config.grid.split("/");
-    paths.length -= 1;
-    await checkOrCreateFolder(paths.join("/") + "/");
+    await checkOrCreateFolder(`${process.cwd()}/${config.grid}/`);
     const outputGrid = `$grid-columns: ${project.data.grids[0].value};`;
-    fs.writeFile(config.grid, outputGrid, err => {
-      if (err) {
-        return console.log(chalk.red(err));
+    fs.writeFile(
+      `${process.cwd()}/${config.grid}/${config.gridFilename}`,
+      outputGrid,
+      err => {
+        if (err) {
+          return console.log(chalk.red(err));
+        }
+        console.log(
+          chalk.green(
+            `The grid file was saved at ${config.grid}/${config.gridFilename}!`
+          )
+        );
       }
-      console.log(chalk.green(`The grid file was saved at ${config.grid}!`));
-    });
+    );
   };
 
   const writeTypo = async project => {
-    const paths = config.typo.split("/");
-    paths.length -= 1;
-    await checkOrCreateFolder(paths.join("/") + "/");
-    const typoScss = createTypoFile(project.data.typographies);
-    fs.writeFile(config.typo, typoScss, err => {
-      if (err) {
-        return console.log(err);
+    const typoSettings = createTypoFileSettings(project.data.typographies);
+    await checkOrCreateFolder(`${process.cwd()}/${config.typoFolder}/`);
+
+    fs.writeFile(
+      `${process.cwd()}/${config.typoFolder}/${config.typoSettingsFilename}`,
+      typoSettings,
+      err => {
+        if (err) {
+          return console.log(err);
+        }
+        console.log(
+          chalk.green(
+            `The typo was saved at ${config.typoFolder}/${
+              config.typoSettingsFilename
+            }!`
+          )
+        );
       }
-      console.log(chalk.green(`The typo was saved at ${config.typo}!`));
-    });
+    );
+
+    const typoScss = createTypoFile(project.data.typographies);
+    fs.writeFile(
+      `${process.cwd()}/${config.typoFolder}/${config.typoEmbedFilename}`,
+      typoScss,
+      err => {
+        if (err) {
+          return console.log(err);
+        }
+        console.log(
+          chalk.green(
+            `The typo was saved at ${config.typoFolder}/${
+              config.typoEmbedFilename
+            }!`
+          )
+        );
+      }
+    );
   };
 
-  const writeTypoSettings = async project => {
-    const typoSettings = createTypoFileSettings(project.data.typographies);
-    fs.writeFile(config.typoSettings, typoSettings, err => {
-      if (err) {
-        return console.log(err);
-      }
-      console.log("The file was saved!");
-    });
-
-    mkdirp(config.fonts);
-
-    const writer = fs.createWriteStream(`${config.fonts}allFonts.zip`);
+  const writeFonts = async project => {
+    await checkOrCreateFolder(`${process.cwd()}/${config.fonts}/fonts/`);
+    const writer = fs.createWriteStream(
+      `${process.cwd()}/${config.fonts}/fonts/allFonts.zip`
+    );
     const response = await axios({
       method: "post",
       responseType: "stream",
@@ -301,16 +395,20 @@ let config = {};
       writer.on("finish", resolve);
       writer.on("error", reject);
     });
-    const zip = new AdmZip(`${config.fonts}allFonts.zip`);
-    zip.extractAllTo(config.fonts, true);
-    fs.unlinkSync(`${config.fonts}allFonts.zip`);
-    console.log(chalk.green(`Fonts have been saved to ${config.fonts}`));
+    const zip = new AdmZip(
+      `${process.cwd()}/${config.fonts}/fonts/allFonts.zip`
+    );
+    zip.extractAllTo(`${process.cwd()}/${config.fonts}/fonts`, true);
+    fs.unlinkSync(`${process.cwd()}/${config.fonts}/fonts/allFonts.zip`);
+    console.log(chalk.green(`Fonts have been saved to ${config.fonts}/fonts`));
   };
 
   const writeImages = async project => {
-    mkdirp(config.images);
+    await checkOrCreateFolder(`${process.cwd()}/${config.images}/images`);
 
-    const writerImages = fs.createWriteStream(`${config.images}allImages.zip`);
+    const writerImages = fs.createWriteStream(
+      `${process.cwd()}/${config.images}/images/allImages.zip`
+    );
     const responseImages = await axios({
       method: "post",
       responseType: "stream",
@@ -328,10 +426,14 @@ let config = {};
       writerImages.on("error", reject);
     });
 
-    const zip2 = new AdmZip(`${config.images}allImages.zip`);
-    zip2.extractAllTo(config.images, true);
-    fs.unlinkSync(`${config.images}allImages.zip`);
-    console.log(chalk.green(`Images have been saved to ${config.images}`));
+    const zip2 = new AdmZip(
+      `${process.cwd()}/${config.images}/images/allImages.zip`
+    );
+    zip2.extractAllTo(config.images + "images", true);
+    fs.unlinkSync(`${process.cwd()}/${config.images}/images/allImages.zip`);
+    console.log(
+      chalk.green(`Images have been saved to ${config.images}/images`)
+    );
   };
 
   const checkOrCreateFolder = pathname => {
@@ -366,17 +468,17 @@ let config = {};
           project.data.colorStatus &&
           project.data.gridStatus
         ) {
-          if (args.includes("colors") || args.includes("all")) {
+          if (args.includes("colors")) {
             writeColors(project);
           }
-          if (args.includes("grid") || args.includes("all")) {
+          if (args.includes("grid")) {
             writeGrid(project);
           }
-          if (args.includes("typo") || args.includes("all")) {
-            writeTypoSettings(project);
+          if (args.includes("typo")) {
+            writeFonts(project);
             writeTypo(project);
           }
-          if (args.includes("images") || args.includes("all")) {
+          if (args.includes("images")) {
             writeImages(project);
           }
         } else {
