@@ -1,6 +1,6 @@
 {
   "name": "@matise/parlor-cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "parlor.js",
   "bin": {
     "parlor": "bin/index.js"
