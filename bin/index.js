@@ -269,19 +269,18 @@ const colorsOutput = {
     );
     return text;
   };
-
   const createTypoFileSettings = typographies => {
     let text;
-    const typos = typographies.map(typo => {
+    const typoDup = [...typographies];
+    typoDup.forEach(typo => {
       typo.gridSize = `grid(${typo.baseSize}/80)`;
       typo.weight = typo.weight.map(weight => {
         return valueSwitch(weight);
       });
-      return typo;
     });
     ejs.renderFile(
       `${__dirname}/ejs/typo-settings.ejs`,
-      { fonts: typos },
+      { fonts: typoDup },
       null,
       (err, str) => {
         text = str;
@@ -296,6 +295,8 @@ const colorsOutput = {
         return "500";
       case "regular":
         return "400";
+      case "semibold":
+        return "600";
       case "bold":
         return "700";
       case "heavy":
@@ -310,6 +311,9 @@ const colorsOutput = {
   };
 
   const writeColors = async project => {
+    if (!config.colors) {
+      config.colors = "";
+    }
     await checkOrCreateFolder(`${process.cwd()}/${config.colors}/`);
     const colorScss = createColorFile(project.data.colors);
     fs.writeFile(
@@ -329,6 +333,9 @@ const colorsOutput = {
   };
 
   const writeGrid = async project => {
+    if (!config.grid) {
+      config.grid = "";
+    }
     await checkOrCreateFolder(`${process.cwd()}/${config.grid}/`);
     const outputGrid = `$grid-columns: ${project.data.grids[0].value};`;
     fs.writeFile(
@@ -351,6 +358,24 @@ const colorsOutput = {
     if (!config.typoFolder) {
       config.typoFolder = "";
     }
+    const typos = [...project.data.typographies];
+    const typoScss = createTypoFile(typos);
+    fs.writeFile(
+      `${process.cwd()}/${config.typoFolder}/${config.typoEmbedFilename}`,
+      typoScss,
+      err => {
+        if (err) {
+          return console.log(err);
+        }
+        console.log(
+          chalk.green(
+            `The typo was saved at ${config.typoFolder}/${
+              config.typoEmbedFilename
+            }!`
+          )
+        );
+      }
+    );
     const typoSettings = createTypoFileSettings(project.data.typographies);
     await checkOrCreateFolder(`${process.cwd()}/${config.typoFolder}/`);
 
@@ -365,24 +390,6 @@ const colorsOutput = {
           chalk.green(
             `The typo was saved at ${config.typoFolder}/${
               config.typoSettingsFilename
-            }!`
-          )
-        );
-      }
-    );
-
-    const typoScss = createTypoFile(project.data.typographies);
-    fs.writeFile(
-      `${process.cwd()}/${config.typoFolder}/${config.typoEmbedFilename}`,
-      typoScss,
-      err => {
-        if (err) {
-          return console.log(err);
-        }
-        console.log(
-          chalk.green(
-            `The typo was saved at ${config.typoFolder}/${
-              config.typoEmbedFilename
             }!`
           )
         );
