@@ -6,7 +6,13 @@ const axios = require("axios");
 const ejs = require("ejs");
 const AdmZip = require("adm-zip");
 const mkdirp = require("mkdirp");
-const commands = ["images", "typo", "colors", "grid"];
+const inquirer = require("inquirer");
+inquirer.registerPrompt("filePath", require("inquirer-file-path"));
+inquirer.registerPrompt("directory", require("inquirer-directory"));
+const commands = ["images", "typo", "fonts", "colors", "grid"];
+const Spinner = require("cli-spinner").Spinner;
+let config = {};
+
 let args = process.argv;
 
 const imageOutput = {
@@ -47,12 +53,18 @@ const colorsOutput = {
     "Enter your colors output (file will be saved as _parlor-custom-colors.scss)"
 };
 
-let config = {};
+//start of functions
 (async () => {
-  const inquirer = require("inquirer");
-  inquirer.registerPrompt("filePath", require("inquirer-file-path"));
-  inquirer.registerPrompt("directory", require("inquirer-directory"));
   let questions = [];
+  let host = "https://api.parlor.mati.se";
+  const indexOfDev = args.indexOf("--dev");
+  if (indexOfDev > -1) {
+    console.log(
+      chalk.green("development mode enabled, looking for http://localhost:3000")
+    );
+    args.splice(indexOfDev, 1);
+    host = "http://localhost:3000";
+  }
   if (args[2] === "all") {
     args.length -= 1;
     args = args.concat(commands);
@@ -65,7 +77,7 @@ let config = {};
             type: "checkbox",
             name: "args",
             message: "What do you want to update?",
-            choices: ["Images", "Typo", "Colors", "Grid"]
+            choices: ["Images", "Typo", "Fonts", "Colors", "Grid"]
           }
         ])
         .then(answers => {
@@ -112,6 +124,8 @@ let config = {};
     if (!config.typoFolder) {
       questions.push(typoFolder);
     }
+  }
+  if (args.includes("fonts")) {
     if (!config.fonts) {
       questions.push(fontOutput);
     }
@@ -157,8 +171,6 @@ let config = {};
       resolve();
     });
   });
-
-  const host = config.host || "https://api.parlor.mati.se";
 
   if (!config.typoSettingsFilename) {
     config.typoSettingsFilename = "_parlor-usage.scss";
@@ -336,6 +348,9 @@ let config = {};
   };
 
   const writeTypo = async project => {
+    if (!config.typoFolder) {
+      config.typoFolder = "";
+    }
     const typoSettings = createTypoFileSettings(project.data.typographies);
     await checkOrCreateFolder(`${process.cwd()}/${config.typoFolder}/`);
 
@@ -376,10 +391,24 @@ let config = {};
   };
 
   const writeFonts = async project => {
+    if (!config.fonts) {
+      config.fonts = "./";
+    }
+    if (config.fonts.indexOf("/fonts") > -1) {
+      let imageOutput = config.images.split("/");
+      if (imageOutput[imageOutput.length - 1] === "fonts") {
+        imageOutput.length -= 1;
+      }
+      config.fonts = imageOutput.join("/");
+    }
     await checkOrCreateFolder(`${process.cwd()}/${config.fonts}/fonts/`);
     const writer = fs.createWriteStream(
       `${process.cwd()}/${config.fonts}/fonts/allFonts.zip`
     );
+    console.log(`Making connection with api: ${host}/parlor-cli/fonts`);
+    const spinner = new Spinner("processing.. %s");
+    spinner.setSpinnerString("|/-\\");
+    spinner.start();
     const response = await axios({
       method: "post",
       responseType: "stream",
@@ -398,14 +427,33 @@ let config = {};
     const zip = new AdmZip(
       `${process.cwd()}/${config.fonts}/fonts/allFonts.zip`
     );
+    spinner.setSpinnerString("Unzipping files");
     zip.extractAllTo(`${process.cwd()}/${config.fonts}/fonts`, true);
     fs.unlinkSync(`${process.cwd()}/${config.fonts}/fonts/allFonts.zip`);
+    spinner.stop(true);
     console.log(chalk.green(`Fonts have been saved to ${config.fonts}/fonts`));
   };
 
   const writeImages = async project => {
+    if (!config.images) {
+      config.images = "./";
+    }
+    if (config.images.indexOf("/images") > -1) {
+      let imageOutput = config.images.split("/");
+      if (imageOutput[imageOutput.length - 1] === "images") {
+        imageOutput.length -= 1;
+      }
+      config.images = imageOutput.join("/");
+    }
     await checkOrCreateFolder(`${process.cwd()}/${config.images}/images`);
-
+    console.log(
+      `Making connection with api: ${host}/project/${
+        config.projectId
+      }/images/download`
+    );
+    const spinner = new Spinner("processing.. %s");
+    spinner.setSpinnerString("|/-\\");
+    spinner.start();
     const writerImages = fs.createWriteStream(
       `${process.cwd()}/${config.images}/images/allImages.zip`
     );
@@ -420,7 +468,6 @@ let config = {};
       }
     });
     responseImages.data.pipe(writerImages);
-
     await new Promise((resolve, reject) => {
       writerImages.on("finish", resolve);
       writerImages.on("error", reject);
@@ -429,8 +476,9 @@ let config = {};
     const zip2 = new AdmZip(
       `${process.cwd()}/${config.images}/images/allImages.zip`
     );
-    zip2.extractAllTo(config.images + "images", true);
+    zip2.extractAllTo(config.images + "/images", true);
     fs.unlinkSync(`${process.cwd()}/${config.images}/images/allImages.zip`);
+    spinner.stop(true);
     console.log(
       chalk.green(`Images have been saved to ${config.images}/images`)
     );
@@ -474,15 +522,19 @@ let config = {};
           if (args.includes("grid")) {
             writeGrid(project);
           }
-          if (args.includes("typo")) {
+          if (args.includes("fonts")) {
             writeFonts(project);
+          }
+          if (args.includes("typo")) {
             writeTypo(project);
           }
           if (args.includes("images")) {
             writeImages(project);
           }
         } else {
-          errorLog("You did not finish the checklist yet, please update it!");
+          errorLog(
+            "The project you are looking for is not finished or does not exsist"
+          );
         }
       } catch (e) {
         errorLog(e);
