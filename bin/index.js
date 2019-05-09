@@ -402,7 +402,7 @@ const colorsOutput = {
       config.fonts = "./";
     }
     if (config.fonts.indexOf("/fonts") > -1) {
-      let imageOutput = config.images.split("/");
+      let imageOutput = config.fonts.split("/");
       if (imageOutput[imageOutput.length - 1] === "fonts") {
         imageOutput.length -= 1;
       }
